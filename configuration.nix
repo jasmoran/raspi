@@ -36,10 +36,7 @@
     isNormalUser = true;
     extraGroups = [ "wheel" ]; # Enable ‘sudo’ for the user.
     hashedPassword = "$6$SW2tM34VZem6TqkQ$yakLgWO.Rj/H3GcbnQR8jlhCAvAzMQ9WyqDMrrLUbVum//v5Mgyz.06KY/0OhSkRvTdHfptOWQiA0AKGoBLH..";
-    openssh.authorizedKeys.keys = [
-      "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCxdnaSpZhL15HUqpRrJm+oTYw0yoI6M9kWym+8/EUBK3O2OiZMc5u1T8Rc4liDLysodkoO3Mrpu3/WeVrcPZ4ad2zqzWwRNcXzVK4suXtGdEkaTNhotbvvsKitZKBJ7rkD8IawNrcG0p3HZluop6GStU2d2Wyz20/9mIzOSRukIBiLeQ0ckvQykr3fLLjsLxID+MsOTX1VPuG1aEYzXnhuR+nesy9TE/kF+rVqXxc5MDJnxYFFhqRfu6hxgnQ8rAjRifyCgPfZNXOqgMXeY5A2nR04zenjJGgtuerbTw+l23PBBYVCvGuZAvL10LMPnvNvr1b/4WXdiBY3qd2Uhk1P"
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKSHryMeDmu2WWEbGkcahJkW0T/AQwYJ5jkKGsQbKbql jack.moran@magiqsoftware.com"
-    ];
+    openssh.authorizedKeys.keys = [ (builtins.readFile ./ca-bundle.crt) ];
   };
 
   users.users.cloudflared = {
