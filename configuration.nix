@@ -1,21 +1,93 @@
-# Edit this configuration file to define what should be installed on
-# your system.  Help is available in the configuration.nix(5) man page
-# and in the NixOS manual (accessible by running ‘nixos-help’).
-
-{ config, pkgs, ... }:
+{ lib, pkgs, config, modulesPath, ... }:
 
 {
-  imports =
-    [ # Include the results of the hardware scan.
-      ./hardware-configuration.nix
-    ];
+  imports = [
+    (modulesPath + "/installer/scan/not-detected.nix")
+  ];
+  nixpkgs.crossSystem.system = "aarch64-linux";
 
-  # Use the extlinux boot loader. (NixOS wants to enable GRUB by default)
-  boot.loader.grub.enable = false;
-  # Enables the generation of /boot/extlinux/extlinux.conf
-  boot.loader.generic-extlinux-compatible.enable = true;
+  boot= {
+    initrd.availableKernelModules = [ "usbhid" ];
+    initrd.kernelModules = [ ];
+    kernelModules = [ ];
+    kernelPackages = config.boot.zfs.package.latestCompatibleLinuxPackages;
+    extraModulePackages = [ ];
+    supportedFilesystems = [ "zfs" ];
+    zfs.devNodes = "/dev/disk/by-id";
+    loader = {
+      efi.canTouchEfiVariables = true;
+      grub = {
+        enable = true;
+        version = 2;
+        efiSupport = true;
+        device = "nodev";
+        zfsSupport = true;
+      };
+    };
+  };
+
+  environment.etc."machine-id".source = "/state/etc/machine-id";
+  environment.etc."zfs/zpool.cache".source = "/state/etc/zfs/zpool.cache";
+
+  fileSystems = {
+    "/" = {
+      device = "zpool/root";
+      fsType = "zfs";
+      options = [ "zfsutil" "X-mount.mkdir" ];
+    };
+    "/boot" = {
+      device = "/dev/disk/by-id/usb-WD_My_Passport_0748_575833314331323531313238-0:0-part1";
+      fsType = "vfat";
+    };
+    "/root" = {
+      device = "zpool/KEEP/root";
+      fsType = "zfs";
+      options = [ "zfsutil" "X-mount.mkdir" ];
+    };
+    "/nix" = {
+      device = "zpool/KEEP/nix";
+      fsType = "zfs";
+      options = [ "zfsutil" "X-mount.mkdir" ];
+    };
+    "/state" = {
+      device = "zpool/KEEP/state";
+      fsType = "zfs";
+      options = [ "zfsutil" "X-mount.mkdir" ];
+      neededForBoot = true;
+    };
+    "/etc/nixos" = {
+      device = "/state/etc/nixos";
+      fsType = "none";
+      options = [ "bind" ];
+    };
+    "/etc/cryptkey.d" = {
+      device = "/state/etc/cryptkey.d";
+      fsType = "none";
+      options = [ "bind" ];
+    };
+    "/var/log" = {
+      device = "/state/var/log";
+      fsType = "none";
+      options = [ "bind" ];
+    };
+  };
+
+  swapDevices = [
+    { device = "/dev/disk/by-id/usb-WD_My_Passport_0748_575833314331323531313238-0:0-part2"; }
+  ];
+
+  # Enables DHCP on each ethernet and wireless interface. In case of scripted networking
+  # (the default) this is the recommended approach. When using systemd-networkd it's
+  # still possible to use this option, but it's recommended to use it in conjunction
+  # with explicit per-interface declarations with `networking.interfaces.<interface>.useDHCP`.
+  networking.useDHCP = lib.mkDefault true;
+  # networking.interfaces.eth0.useDHCP = lib.mkDefault true;
+  # networking.interfaces.wlan0.useDHCP = lib.mkDefault true;
+
+  powerManagement.cpuFreqGovernor = lib.mkDefault "ondemand";
 
   networking.hostName = "raspi"; # Define your hostname.
+  networking.hostId = "a6b2ef29";
   # Pick only one of the below networking options.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
   networking.networkmanager.enable = true;  # Easiest to use and most distros use this by default.
@@ -23,60 +95,26 @@
   # Set your time zone.
   time.timeZone = "Pacific/Auckland";
 
-  # Configure network proxy if necessary
-  # networking.proxy.default = "http://user:password@proxy:port/";
-  # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
-
   # Select internationalisation properties.
   i18n.defaultLocale = "en_NZ.UTF-8";
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
-  users.users.jack = {
-    description = "Jack Moran";
-    isNormalUser = true;
-    extraGroups = [ "wheel" ]; # Enable ‘sudo’ for the user.
+  users.users.root = {
     hashedPassword = "$6$SW2tM34VZem6TqkQ$yakLgWO.Rj/H3GcbnQR8jlhCAvAzMQ9WyqDMrrLUbVum//v5Mgyz.06KY/0OhSkRvTdHfptOWQiA0AKGoBLH..";
-    openssh.authorizedKeys.keys = [ (builtins.readFile ./ca-bundle.crt) ];
+    openssh.authorizedKeys.keys = [ (builtins.readFile ./id_ed25519.pub) ];
   };
-
-  users.users.cloudflared = {
-    group = "cloudflared";
-    isSystemUser = true;
-  };
-  users.groups.cloudflared = { };
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
     vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
-    cloudflared
+    # cloudflared
   ];
-
-  systemd.services.cloudflare_tunnel = {
-    wantedBy = [ "multi-user.target" ];
-    after = [ "network-online.target" "systemd-resolved.service" ];
-    serviceConfig = {
-      ExecStart = "${pkgs.cloudflared}/bin/cloudflared tunnel --no-autoupdate run --token=eyJhIjoiNmI0ZjRiOTllMWZjYTFjNGRjMzMyMjQwOWYwNGU5NzkiLCJ0IjoiZjllNmFmYWQtYjhjMS00MWE5LWJjZWUtZjlmYmI0MjBkYWFiIiwicyI6Ill6WXhNekZtT1RNdE1EWmlNaTAwTW1abExUa3lZemt0TTJRNFpEVmhZekJsTlRnMCJ9";
-      Restart = "always";
-      User = "cloudflared";
-      Group = "cloudflared";
-    };
-  };
-
-  services.caddy = {
-    enable = false;
-    email = "jack@earth.co.nz";
-    config =
-      ''
-        raspi.earth.co.nz
-        respond "Hello Caddy!"
-      '';
-  };
 
   # Enable the OpenSSH daemon.
   services.openssh = {
     enable = true;
-    openFirewall = false;
+    openFirewall = true;
     passwordAuthentication = false;
     allowSFTP = false;
     kbdInteractiveAuthentication = false;
@@ -89,21 +127,7 @@
     '';
   };
 
-  # Enable the tailscale service
-  services.tailscale.enable = true;
-
-  networking.firewall = {
-    # enable the firewall
-    enable = false;
-
-    # always allow traffic from your Tailscale network
-    trustedInterfaces = [ "tailscale0" ];
-
-    # allow the Tailscale UDP port through the firewall
-    allowedUDPPorts = [ config.services.tailscale.port ];
-
-    checkReversePath = "loose";
-  };
+  services.xserver.enable = false;
 
   # Copy the NixOS configuration file and link it from the resulting system
   # (/run/current-system/configuration.nix). This is useful in case you
@@ -116,6 +140,6 @@
   # this value at the release version of the first install of this system.
   # Before changing this value read the documentation for this option
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
-  system.stateVersion = "22.05"; # Did you read the comment?
+  system.stateVersion = "22.11"; # Did you read the comment?
 }
 

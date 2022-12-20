@@ -1,0 +1,80 @@
+#!/usr/bin/env -S bash -e
+
+DISK=/dev/disk/by-id/usb-SanDisk_Ultra_4C532000001018100380-0:0
+
+# Partition sizes
+ESP=512M
+SWAP=2G
+
+# Create partitions
+sgdisk --zap-all $DISK
+sgdisk -n1:1M:+${ESP}     -t2:EF00 $DISK # ESP
+sgdisk -n2:0:+${SWAP}     -t3:8200 $DISK # Swap
+sgdisk -n3:0:0            -t3:BE00 $DISK # ZFS Pool
+
+sync
+sleep 10
+
+# Create pool
+zpool create \
+  -o ashift=12 \
+  -R /mnt \
+  -O acltype=posixacl \
+  -O canmount=off \
+  -O compression=lz4 \
+  -O dnodesize=auto \
+  -O normalization=formD \
+  -O atime=off \
+  -O xattr=sa \
+  -O mountpoint=none \
+  -O sync=disabled \
+  -f \
+  zpool \
+  ${DISK}-part3
+
+# Create datasets
+zfs create -o canmount=noauto -o mountpoint=/     zpool/root
+zfs snapshot zpool/root@clean
+zfs mount zpool/root
+zfs create -o canmount=off    -o mountpoint=/     zpool/KEEP
+zfs create -o canmount=on                         zpool/KEEP/root
+zfs create -o canmount=on                         zpool/KEEP/state
+zfs create -o canmount=on                         zpool/KEEP/nix
+zfs create -o canmount=on                         zpool/KEEP/boot
+
+chmod 700 /mnt/root
+
+mkdir -p /mnt/state/etc/nixos /mnt/etc/nixos /mnt/state/etc/cryptkey.d /mnt/etc/cryptkey.d
+mount -o bind /mnt/state/etc/nixos /mnt/etc/nixos
+mount -o bind /mnt/state/etc/cryptkey.d /mnt/etc/cryptkey.d
+
+# Format and mount ESP
+mkfs.vfat -n EFI $DISK-part1
+mount -t vfat $DISK-part1 /mnt/boot
+
+# Disable ZFS cache
+mkdir -p /mnt/state/etc/zfs/
+rm -f /mnt/state/etc/zfs/zpool.cache
+touch /mnt/state/etc/zfs/zpool.cache
+chmod a-w /mnt/state/etc/zfs/zpool.cache
+chattr +i /mnt/state/etc/zfs/zpool.cache
+
+cp configuration.nix hardware-configuration-zfs.nix zfs.nix /mnt/etc/nixos/
+
+# Pre-install snapshot
+zfs snapshot -r zpool/KEEP@before_install
+
+nixos-install -v --show-trace --no-root-passwd --root /mnt
+
+zfs snapshot -r zpool/KEEP@after_install
+
+umount /mnt/boot
+umount /mnt/etc/cryptkey.d
+umount /mnt/etc/nixos
+zfs unmount zpool/KEEP/root
+zfs unmount zpool/KEEP/state
+zfs unmount zpool/KEEP/nix
+zfs unmount zpool/KEEP/boot
+zfs unmount zpool/root
+
+zpool export zpool

@@ -1,0 +1,8 @@
+1. Install Tow-Boot on SD Card (https://tow-boot.org/getting-started.html) (Shared storage strategy)
+2. Download NIX OS live image (https://nixos.wiki/wiki/NixOS_on_ARM/UEFI) (Getting the installer image)
+3. Create a new partition on the SD Card using the remaining space
+4. Write the live image to the new partition
+
+
+
+boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
