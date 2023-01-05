@@ -115,33 +115,33 @@
 
           fileSystems = {
             "/" = {
-              device = "rpool_8fgfl9/nixos/ROOT/empty";
+              device = "rpool/glaedr";
               fsType = "zfs";
               options = [ "zfsutil" "X-mount.mkdir" ];
             };
             "/boot" = {
-              device = "bpool_8fgfl9/nixos/BOOT/default";
+              device = "bpool/glaedr/boot";
               fsType = "zfs";
               options = [ "zfsutil" "X-mount.mkdir" ];
             };
             "/home" = {
-              device = "rpool_8fgfl9/nixos/DATA/default/home";
+              device = "rpool/glaedr/home";
               fsType = "zfs";
               options = [ "zfsutil" "X-mount.mkdir" ];
             };
             "/root" = {
-              device = "rpool_8fgfl9/nixos/DATA/default/root";
+              device = "rpool/glaedr/root";
               fsType = "zfs";
               options = [ "zfsutil" "X-mount.mkdir" ];
             };
             "/state" = {
-              device = "rpool_8fgfl9/nixos/DATA/default/state";
+              device = "rpool/glaedr/state";
               fsType = "zfs";
               options = [ "zfsutil" "X-mount.mkdir" ];
               neededForBoot = true;
             };
             "/nix" = {
-              device = "rpool_8fgfl9/nixos/DATA/local/nix";
+              device = "rpool/glaedr/nix";
               fsType = "zfs";
               options = [ "zfsutil" "X-mount.mkdir" ];
             };
@@ -159,8 +159,8 @@
               availableKernelModules = [ "ahci" "xhci_pci" "usbhid" "usb_storage" "sd_mod" "sdhci_acpi" ];
               kernelModules = [ ];
               postDeviceCommands = ''
-                zpool import -Nf rpool_8fgfl9
-                zfs rollback -r rpool_8fgfl9/nixos/ROOT/empty@start
+                zpool import -Nf rpool
+                zfs rollback -r rpool/glaedr@start
               '';
             };
             kernelModules = [ ];
