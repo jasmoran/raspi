@@ -41,6 +41,8 @@
                 "/var/log"
                 "/var/spool"
                 "/var/lib/containers"
+                "/var/lib/tailscale"
+                "/var/lib/iwd"
               ];
               files = [
                 "/etc/aliases"
@@ -113,7 +115,7 @@
 
           fileSystems = {
             "/" = {
-              device = "rpool_8fgfl9/nixos/ROOT/default";
+              device = "rpool_8fgfl9/nixos/ROOT/empty";
               fsType = "zfs";
               options = [ "zfsutil" "X-mount.mkdir" ];
             };
@@ -153,8 +155,14 @@
           };
 
           boot = {
-            initrd.availableKernelModules = [ "ahci" "xhci_pci" "usbhid" "usb_storage" "sd_mod" "sdhci_acpi" ];
-            initrd.kernelModules = [ ];
+            initrd = {
+              availableKernelModules = [ "ahci" "xhci_pci" "usbhid" "usb_storage" "sd_mod" "sdhci_acpi" ];
+              kernelModules = [ ];
+              postDeviceCommands = ''
+                zpool import -Nf rpool_8fgfl9
+                zfs rollback -r rpool_8fgfl9/nixos/ROOT/empty@start
+              '';
+            };
             kernelModules = [ ];
             extraModulePackages = [ ];
             loader = {
