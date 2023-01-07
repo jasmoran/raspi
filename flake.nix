@@ -26,7 +26,7 @@
             systemPackages = with pkgs; [
               git
               tailscale
-              docker-compose
+              zfs-autobackup
             ];
 
             # Link machine-id and zpool.cache on boot
@@ -202,7 +202,30 @@
           # Select internationalisation properties.
           i18n.defaultLocale = "en_NZ.UTF-8";
 
-          systemd.services.zfs-mount.enable = false;
+          systemd = {
+            services = {
+              zfs-mount.enable = false;
+
+              # Snapshot glaedr every 5 minutes
+              autobackup = {
+                serviceConfig.Type = "oneshot";
+                path = [ pkgs.zfs pkgs.zfs-autobackup ];
+                script = "zfs-autobackup --verbose --no-thinning glaedr";
+              };
+            };
+
+            timers = {
+              # Snapshot glaedr every 5 minutes
+              autobackup = {
+                wantedBy = [ "timers.target" ];
+                partOf = [ "autobackup.service" ];
+                timerConfig = {
+                  OnCalendar = "*:0/5:0";
+                  Unit = "autobackup.service";
+                };
+              };
+            };
+          };
 
           sound.enable = false;
 
