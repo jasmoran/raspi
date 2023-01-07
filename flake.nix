@@ -188,6 +188,9 @@
             supportedFilesystems = [ "zfs" ];
             zfs.devNodes = "/dev/disk/by-id";
             kernelPackages = config.boot.zfs.package.latestCompatibleLinuxPackages;
+
+            # Disable NixOS containers (different from Docker containers)
+            enableContainers = false;
           };
 
           swapDevices = [
