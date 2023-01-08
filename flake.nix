@@ -275,6 +275,15 @@
                     "/data/HomeMedia:/HomeMedia:ro"
                   ];
                 };
+                postgresql = {
+                  autoStart = true;
+                  image = "docker.io/postgres:alpine";
+                  ports = ["5432:5432"];
+                  volumes = [
+                    "pgdata:/var/lib/postgresql/data"
+                  ];
+                  environmentFiles = ["/state/postgresql.env"];
+                };
               };
             };
           };
