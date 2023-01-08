@@ -209,7 +209,7 @@
             services = {
               zfs-mount.enable = false;
 
-              # Snapshot glaedr every minute
+              # Snapshot glaedr every 5 minutes
               autobackup = {
                 serviceConfig.Type = "oneshot";
                 path = [ pkgs.zfs pkgs.zfs-autobackup ];
@@ -221,12 +221,12 @@
             };
 
             timers = {
-              # Snapshot glaedr every minute
+              # Snapshot glaedr every 5 minutes
               autobackup = {
                 wantedBy = [ "timers.target" ];
                 partOf = [ "autobackup.service" ];
                 timerConfig = {
-                  OnCalendar = "*:*:0";
+                  OnCalendar = "*:0/5:0";
                   Unit = "autobackup.service";
                 };
               };
