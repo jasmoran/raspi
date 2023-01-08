@@ -275,6 +275,16 @@
                     "/data/HomeMedia:/HomeMedia:ro"
                   ];
                 };
+                firefly = {
+                  autoStart = true;
+                  image = "docker.io/fireflyiii/core:latest";
+                  ports = ["8080:8080/tcp"];
+                  volumes = [
+                    "firefly_iii_upload:/var/www/html/storage/upload"
+                  ];
+                  environmentFiles = ["/state/firefly.env"];
+                  dependsOn = [ "postgresql" ];
+                };
                 postgresql = {
                   autoStart = true;
                   image = "docker.io/postgres:alpine";
