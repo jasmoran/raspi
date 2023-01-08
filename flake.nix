@@ -285,6 +285,13 @@
                   environmentFiles = ["/state/firefly.env"];
                   dependsOn = [ "postgresql" ];
                 };
+                firefly-importer = {
+                  autoStart = true;
+                  image = "docker.io/fireflyiii/data-importer:latest";
+                  ports = ["8081:8080/tcp"];
+                  environmentFiles = ["/state/firefly-importer.env"];
+                  dependsOn = ["firefly"];
+                };
                 postgresql = {
                   autoStart = true;
                   image = "docker.io/postgres:alpine";
